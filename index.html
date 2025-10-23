@@ -1,1 +1,291 @@
-<P>analbum quiz</P>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Album Guesser</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .image-container {
+            margin: 30px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .album-image {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            display: none;
+        }
+
+        .controls {
+            margin: 20px 0;
+        }
+
+        .skip-btn, .submit-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 10px;
+            transition: background 0.3s;
+        }
+
+        .skip-btn:hover, .submit-btn:hover {
+            background: #5a67d8;
+        }
+
+        .skip-btn:disabled, .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        input[type="text"] {
+            width: 80%;
+            max-width: 300px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 16px;
+            text-align: center;
+            margin: 20px 0;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: #667eea;
+        }
+
+        .attempts {
+            font-size: 18px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .message {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 20px 0;
+            min-height: 30px;
+        }
+
+        .correct {
+            color: #48bb78;
+        }
+
+        .incorrect {
+            color: #e53e3e;
+        }
+
+        .game-over {
+            font-size: 28px;
+            color: #e53e3e;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            border-radius: 4px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 20%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎵 analbum quiz</h1>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="attempts" id="attempts">Attempt 1/5</div>
+        
+        <div class="image-container">
+            <img src="analbum1.jpg" alt="Album Cover" class="album-image" id="albumImage1">
+            <img src="analbum2.jpg" alt="Album Cover" class="album-image" id="albumImage2">
+            <img src="analbum3.jpg" alt="Album Cover" class="album-image" id="albumImage3">
+            <img src="analbum4.jpg" alt="Album Cover" class="album-image" id="albumImage4">
+            <img src="analbum5.jpg" alt="Album Cover" class="album-image" id="albumImage5">
+        </div>
+        
+        <input type="text" id="guessInput" placeholder="Type the album name..." maxlength="50">
+        
+        <div class="controls">
+            <button class="submit-btn" id="submitBtn">Submit Guess</button>
+            <button class="skip-btn" id="skipBtn">Skip to Next Image</button>
+        </div>
+        
+        <div class="message" id="message"></div>
+        
+        <div id="gameOver" class="message game-over hidden">
+            Game Over! The album was <span id="answer"></span>
+        </div>
+    </div>
+
+    <script>
+        // Game configuration
+        const TOTAL_ATTEMPTS = 5;
+        const CORRECT_ANSWER = "RUMOURS"; // CHANGE THIS TO THE ACTUAL ALBUM NAME
+        
+        let currentAttempt = 1;
+        let gameWon = false;
+
+        // DOM elements
+        const images = [
+            document.getElementById('albumImage1'),
+            document.getElementById('albumImage2'),
+            document.getElementById('albumImage3'),
+            document.getElementById('albumImage4'),
+            document.getElementById('albumImage5')
+        ];
+        const guessInput = document.getElementById('guessInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const skipBtn = document.getElementById('skipBtn');
+        const message = document.getElementById('message');
+        const attempts = document.getElementById('attempts');
+        const progressFill = document.getElementById('progressFill');
+        const gameOver = document.getElementById('gameOver');
+        const answerSpan = document.getElementById('answer');
+
+        // Initialize game
+        function initGame() {
+            showImage(currentAttempt);
+            updateUI();
+            guessInput.focus();
+        }
+
+        function showImage(attempt) {
+            // Hide all images
+            images.forEach(img => img.style.display = 'none');
+            // Show current image
+            images[attempt - 1].style.display = 'block';
+        }
+
+        function updateUI() {
+            attempts.textContent = `Attempt ${currentAttempt}/${TOTAL_ATTEMPTS}`;
+            progressFill.style.width = `${(currentAttempt / TOTAL_ATTEMPTS) * 100}%`;
+            
+            // Disable skip on last attempt
+            skipBtn.disabled = currentAttempt === TOTAL_ATTEMPTS;
+            
+            // Clear message
+            message.textContent = '';
+            message.className = 'message';
+        }
+
+        function checkGuess(guess) {
+            const normalizedGuess = guess.trim().toLowerCase();
+            const normalizedAnswer = CORRECT_ANSWER.toLowerCase();
+            
+            return normalizedGuess === normalizedAnswer;
+        }
+
+        function showMessage(text, isCorrect = false) {
+            message.textContent = text;
+            message.className = `message ${isCorrect ? 'correct' : 'incorrect'}`;
+        }
+
+        function endGame(won = false) {
+            gameWon = won;
+            guessInput.disabled = true;
+            submitBtn.disabled = true;
+            skipBtn.disabled = true;
+            
+            if (won) {
+                showMessage('🎉 CORRECT! Well done!', true);
+            } else {
+                gameOver.classList.remove('hidden');
+                answerSpan.textContent = CORRECT_ANSWER;
+            }
+        }
+
+        function nextAttempt() {
+            if (currentAttempt < TOTAL_ATTEMPTS) {
+                currentAttempt++;
+                showImage(currentAttempt);
+                updateUI();
+                guessInput.value = '';
+                guessInput.focus();
+            } else {
+                endGame(false);
+            }
+        }
+
+        // Event listeners
+        submitBtn.addEventListener('click', () => {
+            const guess = guessInput.value;
+            if (!guess.trim()) {
+                showMessage('Please enter a guess!');
+                return;
+            }
+            
+            if (checkGuess(guess)) {
+                endGame(true);
+            } else {
+                showMessage('Incorrect! Try again or skip.');
+                guessInput.value = '';
+            }
+        });
+
+        skipBtn.addEventListener('click', nextAttempt);
+
+        guessInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitBtn.click();
+            }
+        });
+
+        // Start the game
+        initGame();
+    </script>
+</body>
+</html>
